@@ -10,7 +10,7 @@ import (
 // global state for the size of the matrices
 // in C I would use #define but I looked into it and go doesn't appear to have
 // a direct equivalent, so this will do
-const SIZE = 5
+const SIZE = 100
 
 // opting for arrays instead of slices because I do not need dynamically sized
 // memory, I always know it will be 100x100 (SIZE x SIZE)
