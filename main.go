@@ -4,12 +4,13 @@ import (
   "fmt"
   "math/rand"
   "time"
+  "sync"
 )
 
 // global state for the size of the matrices
 // in C I would use #define but I looked into it and go doesn't appear to have
 // a direct equivalent, so this will do
-const SIZE = 100
+const SIZE = 5
 
 // opting for arrays instead of slices because I do not need dynamically sized
 // memory, I always know it will be 100x100 (SIZE x SIZE)
@@ -24,25 +25,27 @@ func main() {
   // begin timing
   start := time.Now()
   naive_mult(A, B)
-  t := time.Now()
   
   fmt.Printf(
     "%dx%d Matrix Multiplication WITHOUT goroutines accomplished in: %s \n",
     SIZE, 
     SIZE,
-    t.Sub(start))
-
+    time.Since(start))
+  
+  // I am going to make new matrices to avoid any caching advantages that 
+  // the goroutine code may have over the naive implementation
+  A = construct_matrix()
+  B = construct_matrix()
+  
+  // begin timing for optimized multiplication
   start = time.Now()
-  naive_mult(A, B)
-  t = time.Now()
-  /*
-  fmt.Println("Matrix A:")
-  print_matrix(A)
-  fmt.Println("Matrix B:")
-  print_matrix(B)
-  fmt.Println("Result C:")
-  print_matrix(C)
-  */
+  optimized_mult(A, B)
+
+  fmt.Printf(
+    "%dx%d Matrix Multiplication WITH    goroutines accomplished in: %s \n",
+    SIZE, 
+    SIZE,
+    time.Since(start))
 }
 
 // constructs a matrix of SIZE x SIZE filled with floats from 0-1
@@ -67,6 +70,34 @@ func naive_mult(A Matrix, B Matrix) Matrix {
       }
     }
   }
+  return C
+}
+
+// matrix multiplication optimized with goroutines 
+func optimized_mult(A Matrix, B Matrix) Matrix {
+  var C Matrix
+  var wg sync.WaitGroup
+
+  for i := 0; i < len(A); i++ {
+    // each row of the matrix multiplication will be done in parallel
+    // so we add 1 to the wait group per row
+    wg.Add(1)
+    
+    go func(row int) {
+      // guarantee goroutine finishes with Done
+      defer wg.Done()
+
+      for j := 0; j < len(B[row]); j++ {
+        C[row][j] = 0;
+        for k := 0; k < len(B); k++ {
+          C[row][j] += A[row][k] * B[k][j]
+        }
+      }
+    }(i)
+  }
+  
+  // wait for all goroutines to be Done
+  wg.Wait()
   return C
 }
 
