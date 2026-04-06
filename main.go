@@ -1,10 +1,10 @@
 package main
 
 import (
-  "fmt"
-  "math/rand"
-  "time"
-  "sync"
+	"fmt"
+	"math/rand"
+	"sync"
+	"time"
 )
 
 // global state for the size of the matrices
@@ -19,110 +19,110 @@ type Matrix [SIZE][SIZE]float32
 // main creates two matrices, records the amount of time their multiplication
 // takes, and prints that time to stdout
 func main() {
-  A := construct_matrix()
-  B := construct_matrix()
-  
-  // begin timing
-  start := time.Now()
-  naive_mult(A, B)
-  
-  fmt.Printf(
-    "%dx%d Matrix Multiplication WITHOUT goroutines accomplished in: %s \n",
-    SIZE, 
-    SIZE,
-    time.Since(start))
-  
-  // I am going to make new matrices to avoid any caching advantages that 
-  // the goroutine code may have over the naive implementation
-  A = construct_matrix()
-  B = construct_matrix()
-  
-  // begin timing for optimized multiplication
-  start = time.Now()
-  optimized_mult(A, B)
+	A := construct_matrix()
+	B := construct_matrix()
 
-  fmt.Printf(
-    "%dx%d Matrix Multiplication WITH    goroutines accomplished in: %s \n",
-    SIZE, 
-    SIZE,
-    time.Since(start))
+	// begin timing
+	start := time.Now()
+	naive_mult(A, B)
+
+	fmt.Printf(
+		"%dx%d Matrix Multiplication WITHOUT goroutines accomplished in: %s \n",
+		SIZE,
+		SIZE,
+		time.Since(start))
+
+	// I am going to make new matrices to avoid any caching advantages that
+	// the goroutine code may have over the naive implementation
+	A = construct_matrix()
+	B = construct_matrix()
+
+	// begin timing for optimized multiplication
+	start = time.Now()
+	optimized_mult(A, B)
+
+	fmt.Printf(
+		"%dx%d Matrix Multiplication WITH    goroutines accomplished in: %s \n",
+		SIZE,
+		SIZE,
+		time.Since(start))
 }
 
 // constructs a matrix of SIZE x SIZE filled with floats from 0-1
 func construct_matrix() Matrix {
-  var M Matrix 
-  for i := 0; i < len(M); i++ {
-    for j := 0; j < len(M[i]); j++ {
-      M[i][j] = rand.Float32() 
-    }
-  }
-  return M
+	var M Matrix
+	for i := range len(M) {
+		for j := range len(M[i]) {
+			M[i][j] = rand.Float32()
+		}
+	}
+	return M
 }
 
 // naive matrix multiplication without goroutines
 func naive_mult(A Matrix, B Matrix) Matrix {
-  var C Matrix
-  for i := 0; i < len(A); i++ {
-    for j := 0; j < len(B[i]); j++ {
-      C[i][j] = 0;
-      for k := 0; k < len(B); k++ {
-        C[i][j] += A[i][k] * B[k][j]
-      }
-    }
-  }
-  return C
+	var C Matrix
+	for i := range len(A) {
+		for j := range len(B[i]) {
+			C[i][j] = 0
+			for k := range len(B) {
+				C[i][j] += A[i][k] * B[k][j]
+			}
+		}
+	}
+	return C
 }
 
-// matrix multiplication optimized with goroutines 
+// matrix multiplication optimized with goroutines
 func optimized_mult(A Matrix, B Matrix) Matrix {
-  var C Matrix
-  var wg sync.WaitGroup
+	var C Matrix
+	var wg sync.WaitGroup
 
-  for i := 0; i < len(A); i++ {
-    // each row of the matrix multiplication will be done in parallel
-    // so we add 1 to the wait group per row
-    wg.Add(1)
-    
-    go func(row int) {
-      // guarantee goroutine finishes with Done
-      defer wg.Done()
+	for i := range len(A) {
+		// each row of the matrix multiplication will be done in parallel
+		// so we add 1 to the wait group per row
+		wg.Add(1)
 
-      for j := 0; j < len(B[row]); j++ {
-        C[row][j] = 0;
-        for k := 0; k < len(B); k++ {
-          C[row][j] += A[row][k] * B[k][j]
-        }
-      }
-    }(i)
-  }
-  
-  // wait for all goroutines to be Done
-  wg.Wait()
-  return C
+		go func(row int) {
+			// guarantee goroutine finishes with Done
+			defer wg.Done()
+
+			for j := range len(B[row]) {
+				C[row][j] = 0
+				for k := range len(B) {
+					C[row][j] += A[row][k] * B[k][j]
+				}
+			}
+		}(i)
+	}
+
+	// wait for all goroutines to be Done
+	wg.Wait()
+	return C
 }
 
 // for testing purposes, this function takes a matrix and prints out each element
 // all of the brackets are to make it easy to copy-paste in wulfram alpha to
-// see if my matrix multiplications actually work 
+// see if my matrix multiplications actually work
 // it did not occur to me that there might be better formatting already
-// available in go 
+// available in go
 func print_matrix(M Matrix) {
-  for i := 0; i < len(M); i++ {
-    if i == 0 { 
-      fmt.Printf("[[")
-    } else {
-      fmt.Printf("\n[")
-    }
-    for j := 0; j < len(M[i]); j++ {
-      fmt.Printf("%f", M[i][j])
-      if j != len(M[i])-1 {
-        fmt.Printf(", ")
-      }
-    }
-    fmt.Printf("]")
-    if i != len(M)-1 {
-      fmt.Printf(",")
-    }
-  }
-  fmt.Printf("]\n")
+	for i := range len(M) {
+		if i == 0 {
+			fmt.Printf("[[")
+		} else {
+			fmt.Printf("\n[")
+		}
+		for j := range len(M[i]) {
+			fmt.Printf("%f", M[i][j])
+			if j != len(M[i])-1 {
+				fmt.Printf(", ")
+			}
+		}
+		fmt.Printf("]")
+		if i != len(M)-1 {
+			fmt.Printf(",")
+		}
+	}
+	fmt.Printf("]\n")
 }
